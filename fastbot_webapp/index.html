@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FastBot Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ── CONNECTION SCREEN ── -->
+  <div id="connection-screen">
+    <div class="connect-card">
+      <div class="logo-block">
+        <div class="logo-icon">⬡</div>
+        <h1>FAST<span>BOT</span></h1>
+        <p class="tagline">Robot Control Interface</p>
+      </div>
+      <div class="connect-form">
+        <label for="rosbridge-url">ROSBRIDGE ADDRESS</label>
+        <input
+          type="text"
+          id="rosbridge-url"
+          placeholder="wss://your-rosbridge-address/rosbridge/"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="connect-btn" onclick="rosConnection.connect()">
+          <span class="btn-text">CONNECT</span>
+          <span class="btn-icon">→</span>
+        </button>
+        <div id="connection-status" class="status-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MAIN DASHBOARD (hidden until connected) ── -->
+  <div id="dashboard" class="hidden">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="logo-small">⬡ FASTBOT</div>
+        <div class="connection-indicator">
+          <span class="dot active"></span>
+          <span id="connected-url"></span>
+        </div>
+      </div>
+      <button id="disconnect-btn" onclick="rosConnection.disconnect()">
+        ✕ DISCONNECT
+      </button>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="dashboard-grid">
+
+      <!-- TOP LEFT: 3D Model Viewer -->
+      <section class="panel panel-model" id="panel-model">
+        <div class="panel-header">
+          <span class="panel-title">3D MODEL</span>
+          <span class="panel-badge" id="model-status">LOADING</span>
+        </div>
+        <div class="panel-body" id="model-container">
+          <!-- ros3djs renders a WebGL canvas here automatically -->
+        </div>
+      </section>
+
+      <!-- TOP RIGHT: Camera Feed -->
+      <section class="panel panel-camera" id="panel-camera">
+        <div class="panel-header">
+          <span class="panel-title">CAMERA FEED</span>
+          <span class="panel-badge" id="cam-status">CONNECTING</span>
+        </div>
+        <div class="panel-body">
+          <img
+            id="camera-feed"
+            alt="Camera feed"
+            onerror="document.getElementById('cam-status').textContent='NO SIGNAL'"
+          />
+          <div id="cam-placeholder" class="placeholder-msg">
+            <span>◎</span>
+            <p>Camera feed loading...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- BOTTOM: Controls -->
+      <section class="panel panel-controls" id="panel-controls">
+        <div class="panel-header">
+          <span class="panel-title">CONTROLS</span>
+        </div>
+        <div class="controls-grid">
+
+          <!-- Joystick -->
+          <div class="control-block joystick-block">
+            <div class="block-label">JOYSTICK</div>
+            <div class="joystick-wrap">
+              <canvas id="joystick-canvas" width="160" height="160"></canvas>
+            </div>
+            <div class="wasd-hint">
+              <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+              <span>also supported</span>
+            </div>
+          </div>
+
+          <!-- Speed & Pose -->
+          <div class="control-block telemetry-block">
+            <div class="block-label">TELEMETRY</div>
+            <div class="telem-grid">
+              <div class="telem-item">
+                <span class="telem-label">LINEAR</span>
+                <span class="telem-value" id="speed-linear">0.00 m/s</span>
+              </div>
+              <div class="telem-item">
+                <span class="telem-label">ANGULAR</span>
+                <span class="telem-value" id="speed-angular">0.00 rad/s</span>
+              </div>
+              <div class="telem-item">
+                <span class="telem-label xaxis">POS X</span>
+                <span class="telem-value" id="pos-x">0.000</span>
+              </div>
+              <div class="telem-item">
+                <span class="telem-label yaxis">POS Y</span>
+                <span class="telem-value" id="pos-y">0.000</span>
+              </div>
+              <div class="telem-item">
+                <span class="telem-label yaw">YAW</span>
+                <span class="telem-value" id="pos-yaw">0.000°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Waypoints -->
+          <div class="control-block waypoints-block">
+            <div class="block-label">WAYPOINTS</div>
+            <div class="waypoint-btns">
+              <button class="wp-btn" onclick="navigation.sendWaypoint('living_room')">
+                <span class="wp-icon">⌂</span>
+                <span>LIVING ROOM</span>
+              </button>
+              <button class="wp-btn" onclick="navigation.sendWaypoint('kitchen')">
+                <span class="wp-icon">⚏</span>
+                <span>KITCHEN</span>
+              </button>
+              <button class="wp-btn" onclick="navigation.sendWaypoint('sofa')">
+                <span class="wp-icon">◈</span>
+                <span>SOFA</span>
+              </button>
+            </div>
+            <button class="stop-btn" onclick="navigation.cancelGoal()">
+              ■ STOP NAVIGATION
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ROS Libraries (self-hosted to avoid CDN blocks) -->
+  <script src="lib/eventemitter2.min.js"></script>
+  <script src="lib/roslib.min.js"></script>
+
+  <!-- 3D Model Libraries -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/ros3d.min.js"></script>
+  <!-- App Modules -->
+  <script src="js/connection.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/telemetry.js"></script>
+  <script src="js/joystick.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/model3d.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>
