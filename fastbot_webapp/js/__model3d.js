@@ -1,26 +1,16 @@
 /**
  * model3d.js
- * Renders the FastBot 3D model in the browser using ros3djs.
- * Shows the robot URDF with live TF transforms.
- *
- * Requires:
- *  - three.js
- *  - ros3djs
- *  - tf2_web_republisher running on the robot
+ * Renders the FastBot 3D model using ros3djs.
  */
 
 const model3d = (() => {
 
-  let viewer   = null;
-  let tfClient = null;
+  let viewer     = null;
+  let tfClient   = null;
   let urdfClient = null;
 
-  // Adjust this to where your robot URDF meshes are served from.
-  // The web_video_server or a static file server can serve them.
-  // In The Construct, meshes are typically served from the webpage directory.
-  const URDF_PACKAGE_PATH = '../';   // root of webpage_ws
-  const ROBOT_DESCRIPTION_TOPIC = '/fastbot_1_robot_description';
-  const FIXED_FRAME = 'fastbot_1_odom';
+  const FIXED_FRAME = 'map';
+  const URDF_PARAM  = '/fastbot_1_robot_state_publisher:robot_description';
 
   function init(ros) {
     const container = document.getElementById('model-container');
@@ -28,53 +18,58 @@ const model3d = (() => {
 
     const badge = document.getElementById('model-status');
 
-    // First check what robot_description params are available
-    const paramClient = new ROSLIB.Service({
-      ros,
-      name:        '/fastbot_1_robot_state_publisher/get_parameters',
-      serviceType: 'rcl_interfaces/GetParameters'
-    });
+    const meshPath = location.origin +
+      location.pathname.replace('index.html', '') +
+      'meshes/';
+    console.log('[Model3D] Mesh path:', meshPath);
 
-    // Create the 3D viewer
     viewer = new ROS3D.Viewer({
-      divID:      'model-container',
-      width:      container.clientWidth  || 400,
-      height:     container.clientHeight || 300,
-      antialias:  true,
-      background: '#0d0f12'
+      divID:        'model-container',
+      width:        container.clientWidth  || 400,
+      height:       container.clientHeight || 300,
+      antialias:    true,
+      background:   '#0d0f12',
+      cameraPose:   { x: 0.3, y: 0.3, z: 0.5 },  // close to small robot
     });
 
-    // Grid
     viewer.addObject(new ROS3D.Grid({
       color:     '#1a2030',
-      cellSize:  0.5,
+      cellSize:  0.25,
       num_cells: 10
     }));
 
-    // TF client
+    // Standard TFClient with tf2_web_republisher
     tfClient = new ROSLIB.TFClient({
       ros,
+      fixedFrame:   FIXED_FRAME,
       angularThres: 0.01,
       transThres:   0.01,
-      rate:         10.0,
-      fixedFrame:   FIXED_FRAME
+      rate:         15.0,
+      serverName:   '/tf2_web_republisher'
     });
 
-    // Try loading URDF — use the param name that robot_state_publisher uses
-    // In ROS2 the param is 'robot_description' on the node namespace
     urdfClient = new ROS3D.UrdfClient({
       ros,
+      param:      URDF_PARAM,
       tfClient,
-      path:        window.location.origin + window.location.pathname.replace('index.html',''),
-      rootObject:  viewer.scene,
-      loader:      ROS3D.COLLADA_LOADER_2,
-      param:       'robot_description',
-      ros_package_path: ''
+      path:       meshPath,
+      rootObject: viewer.scene,
+      loader:     ROS3D.COLLADA_LOADER_2
     });
 
     badge.textContent = 'LIVE';
     badge.classList.add('live');
-    console.log('3D model viewer initialised');
+    console.log('[Model3D] UrdfClient created, param:', URDF_PARAM);
+
+    // Auto-zoom: after meshes load, fit camera to scene
+    setTimeout(() => {
+      if (viewer && viewer.camera) {
+        // Look at origin where robot starts
+        viewer.camera.position.set(0.5, 0.5, 0.5);
+        viewer.camera.lookAt(0, 0, 0);
+        console.log('[Model3D] Camera repositioned');
+      }
+    }, 4000);  // wait for collada to finish loading
 
     window.addEventListener('resize', () => {
       if (viewer) viewer.resize(container.clientWidth, container.clientHeight);
@@ -82,18 +77,13 @@ const model3d = (() => {
   }
 
   function stop() {
-    if (tfClient)   { tfClient.dispose();  tfClient   = null; }
-    if (urdfClient) {                       urdfClient = null; }
-    if (viewer)     { viewer.stop();        viewer     = null; }
-
+    if (tfClient)   { tfClient.dispose(); tfClient   = null; }
+    if (urdfClient) {                     urdfClient = null; }
+    if (viewer)     { viewer.stop();      viewer     = null; }
     const container = document.getElementById('model-container');
     if (container) container.innerHTML = '';
-
     const badge = document.getElementById('model-status');
-    if (badge) {
-      badge.textContent = 'LOADING';
-      badge.classList.remove('live');
-    }
+    if (badge) { badge.textContent = 'LOADING'; badge.classList.remove('live'); }
   }
 
   return { init, stop };

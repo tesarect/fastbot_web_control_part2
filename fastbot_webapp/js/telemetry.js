@@ -60,7 +60,7 @@ const telemetry = (() => {
       const angZ = msg.angular.z;
       document.getElementById('speed-linear').textContent  = linX.toFixed(3) + ' m/s';
       document.getElementById('speed-angular').textContent = angZ.toFixed(3) + ' rad/s';
-      console.log('[DEBUG] CMD_VEL:', linX, angZ);
+      // console.log('[DEBUG] CMD_VEL:', linX, angZ);
     });
 
     console.log('Telemetry subscribed to', ODOM_TOPIC, 'and', CMDVEL_TOPIC);

@@ -1,96 +1,134 @@
 /**
- * Sends Nav2 waypoint goals via /navigate_to_pose action.
- * Waypoint coordinates based on the CP21 environment map.
+ * navigation.js
+ * Sends Nav2 waypoint goals via /goal_pose topic.
+ * Cancels via repeated zero velocity + new goal at current position.
  */
 
 const navigation = (() => {
 
-  // ── Waypoint definitions (x, y, yaw in map frame) ──
-  // Adjust these values to match your actual map coordinates
+  // Waypoints from actual robot amcl_pose readings
   const WAYPOINTS = {
-    living_room: { x: -1.5, y:  0.5, yaw: 0.0 },
-    kitchen:     { x:  1.8, y: -0.5, yaw: -1.57 },
-    sofa:        { x: -0.5, y:  1.5, yaw: 1.57  }
+    living_room: { x:  1.089, y: -1.736, yaw: 0.0 },
+    kitchen:     { x:  1.147, y:  2.383, yaw: 0.0 },
+    sofa:        { x: -2.666, y: -1.197, yaw: 0.0 }
   };
 
-  let actionClient = null;
-  let currentGoal  = null;
-  let activeBtn    = null;
+  let ros_ref     = null;
+  let goalTopic   = null;
+  let cmdVelTopic = null;
+  let stopInterval = null;
+  let activeBtn   = null;
+
+  // Track current robot position from odom
+  let currentX = 0, currentY = 0, currentQz = 0, currentQw = 1;
 
   function init(ros) {
-    actionClient = new ROSLIB.ActionClient({
+    ros_ref = ros;
+
+    goalTopic = new ROSLIB.Topic({
       ros,
-      serverName:  '/navigate_to_pose',
-      actionName:  'nav2_msgs/action/NavigateToPose',
-      omitFeedback: false,
-      omitStatus:   false,
-      omitResult:   false
+      name:        '/goal_pose',
+      messageType: 'geometry_msgs/PoseStamped'
     });
+
+    cmdVelTopic = new ROSLIB.Topic({
+      ros,
+      name:        '/fastbot_1/cmd_vel',
+      messageType: 'geometry_msgs/Twist'
+    });
+
+    // Track robot position for cancel
+    const odomSub = new ROSLIB.Topic({
+      ros,
+      name:        '/fastbot_1/odom',
+      messageType: 'nav_msgs/Odometry',
+      throttle_rate: 500,
+      queue_length: 1
+    });
+    odomSub.subscribe((msg) => {
+      currentX  = msg.pose.pose.position.x;
+      currentY  = msg.pose.pose.position.y;
+      currentQz = msg.pose.pose.orientation.z;
+      currentQw = msg.pose.pose.orientation.w;
+    });
+
+    console.log('[Navigation] Ready');
   }
 
   function sendWaypoint(name) {
-    if (!actionClient) return;
+    if (!goalTopic) return;
+
+    // Stop any existing cancel
+    clearStopInterval();
 
     const wp = WAYPOINTS[name];
-    if (!wp) { console.warn('Unknown waypoint:', name); return; }
-
-    // Cancel any existing goal
-    cancelGoal();
+    if (!wp) return;
 
     // Highlight active button
     document.querySelectorAll('.wp-btn').forEach(b => b.classList.remove('active'));
     activeBtn = document.querySelector(`.wp-btn[onclick*="${name}"]`);
     if (activeBtn) activeBtn.classList.add('active');
 
-    // Convert yaw to quaternion (rotation around Z)
+    // Convert yaw to quaternion
     const qz = Math.sin(wp.yaw / 2);
     const qw = Math.cos(wp.yaw / 2);
 
-    const goal = new ROSLIB.Goal({
-      actionClient,
-      goalMessage: {
-        pose: {
-          header: {
-            stamp:    { sec: 0, nanosec: 0 },
-            frame_id: 'map'
-          },
-          pose: {
-            position:    { x: wp.x, y: wp.y, z: 0.0 },
-            orientation: { x: 0.0,  y: 0.0,  z: qz, w: qw }
-          }
-        },
-        behavior_tree: ''
+    goalTopic.publish(new ROSLIB.Message({
+      header: { frame_id: 'map', stamp: { sec: 0, nanosec: 0 } },
+      pose: {
+        position:    { x: wp.x, y: wp.y, z: 0.0 },
+        orientation: { x: 0.0, y: 0.0, z: qz, w: qw }
       }
-    });
+    }));
 
-    goal.on('result', (result) => {
-      console.log('Navigation result:', result);
-      if (activeBtn) activeBtn.classList.remove('active');
-      activeBtn = null;
-    });
-
-    goal.on('feedback', (fb) => {
-      // Optional: show distance remaining
-      // console.log('Distance remaining:', fb.distance_remaining);
-    });
-
-    goal.send();
-    currentGoal = goal;
-    console.log(`Navigating to: ${name}`, wp);
+    console.log(`[Navigation] Sent goal to: ${name}`, wp);
   }
 
   function cancelGoal() {
-    if (currentGoal) {
-      currentGoal.cancel();
-      currentGoal = null;
+    clearStopInterval();
+
+    // Step 1 — send zero velocity immediately
+    sendZeroVel();
+
+    // Step 2 — send goal AT current robot position to cancel navigation
+    // Nav2 will reach the goal instantly (robot is already there) and stop
+    if (goalTopic) {
+      goalTopic.publish(new ROSLIB.Message({
+        header: { frame_id: 'odom', stamp: { sec: 0, nanosec: 0 } },
+        pose: {
+          position:    { x: currentX, y: currentY, z: 0.0 },
+          orientation: { x: 0.0, y: 0.0, z: currentQz, w: currentQw }
+        }
+      }));
     }
+
+    // Step 3 — keep sending zero vel for 2 seconds to ensure stop
+    stopInterval = setInterval(sendZeroVel, 100);
+    setTimeout(clearStopInterval, 2000);
+
     document.querySelectorAll('.wp-btn').forEach(b => b.classList.remove('active'));
     activeBtn = null;
+    console.log('[Navigation] Stop sent to current position', currentX.toFixed(2), currentY.toFixed(2));
+  }
+
+  function sendZeroVel() {
+    if (!cmdVelTopic) return;
+    cmdVelTopic.publish(new ROSLIB.Message({
+      linear:  { x: 0, y: 0, z: 0 },
+      angular: { x: 0, y: 0, z: 0 }
+    }));
+  }
+
+  function clearStopInterval() {
+    if (stopInterval) { clearInterval(stopInterval); stopInterval = null; }
   }
 
   function stop() {
-    cancelGoal();
-    actionClient = null;
+    clearStopInterval();
+    if (goalTopic)   { goalTopic.unadvertise();   goalTopic   = null; }
+    if (cmdVelTopic) { cmdVelTopic.unadvertise(); cmdVelTopic = null; }
+    document.querySelectorAll('.wp-btn').forEach(b => b.classList.remove('active'));
+    activeBtn = null;
   }
 
   return { init, sendWaypoint, cancelGoal, stop };

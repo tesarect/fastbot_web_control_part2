@@ -8,9 +8,9 @@
     --accent2: #ff6b35;
     --text: #e0e6f0;
     --text-dim: #6b7590;
-    --text-dim-xaxis: #fd0000;
-    --text-dim-yaxis: #22fd00;
-    --text-dim-yaw: #037ffb;
+    --telem-val-xaxis: #f66d6d;
+    --telem-val-yaxis: #22fd00;
+    --telem-val-yaw: #037ffb;
     --success: #00ff88;
     --danger: #ff3b5c;
     --font-mono: 'Share Tech Mono', monospace;
@@ -500,31 +500,33 @@ kbd {
     color: var(--text-dim);
 }
 
-.telem-label xaxis {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--text-dim-xaxis);
-}
-
-.telem-label yaxis {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--text-dim-yaxis);
-}
-
-.telem-label yaw {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--text-dim-yaw);
-}
 
 .telem-value {
     font-family: var(--font-mono);
     font-size: 18px;
     color: var(--accent);
+    font-weight: normal;
+}
+
+.telem-value-xaxis {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--telem-val-xaxis);
+    font-weight: normal;
+}
+
+.telem-value-yaxis {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--telem-val-yaxis);
+    font-weight: normal;
+}
+
+.telem-value-yaw {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--accent);
+    /* color: var(--telem-val-yaw); */
     font-weight: normal;
 }
 
