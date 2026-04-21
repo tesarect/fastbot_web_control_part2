@@ -5,6 +5,7 @@
 
 function onRosConnected(ros, rosbridgeUrl) {
   console.log('ROS connected — initialising modules');
+  logger.log('ROS connected');
   camera.init(ros, rosbridgeUrl);
   telemetry.init(ros);
   joystick.init(ros);
@@ -15,6 +16,7 @@ function onRosConnected(ros, rosbridgeUrl) {
 
 function onRosDisconnected() {
   console.log('ROS disconnected — stopping modules');
+  logger.warn('ROS disconnected');
   camera.stop();
   telemetry.stop();
   joystick.stop();

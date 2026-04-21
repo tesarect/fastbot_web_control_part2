@@ -78,6 +78,10 @@
                         <span>◎</span>
                         <p>Camera feed loading...</p>
                     </div>
+                    <!-- Log overlay -->
+                    <div id="log-overlay">
+                        <ul id="log-list"></ul>
+                    </div>
                 </div>
             </section>
 
@@ -95,8 +99,9 @@
                             <canvas id="joystick-canvas" width="160" height="160"></canvas>
                         </div>
                         <div class="wasd-hint">
-                            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
-                            <span>also supported</span>
+                            <div class="wasd-row"><kbd>W</kbd></div>
+                            <div class="wasd-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+                            <span class="wasd-label">keyboard</span>
                         </div>
                     </div>
 
@@ -115,17 +120,14 @@
                             <div class="telem-item">
                                 <span class="telem-label">POS X</span>
                                 <span class="telem-value" id="pos-x">0.000</span>
-                                <!-- <span class="telem-value-xaxis" id="pos-x">0.000</span> -->
                             </div>
                             <div class="telem-item">
                                 <span class="telem-label">POS Y</span>
                                 <span class="telem-value" id="pos-y">0.000</span>
-                                <!-- <span class="telem-value-yaxis" id="pos-y">0.000</span> -->
                             </div>
                             <div class="telem-item">
                                 <span class="telem-label">YAW</span>
                                 <span class="telem-value" id="pos-yaw">0.000°</span>
-                                <!-- <span class="telem-value-yaw" id="pos-yaw">0.000°</span> -->
                             </div>
                         </div>
                     </div>
@@ -165,7 +167,9 @@
     <!-- 3D Model Libraries -->
     <script src="lib/three.min.js"></script>
     <script src="lib/ros3d.min.js"></script>
+
     <!-- App Modules -->
+    <script src="js/logger.js"></script>
     <script src="js/connection.js"></script>
     <script src="js/camera.js"></script>
     <script src="js/telemetry.js"></script>

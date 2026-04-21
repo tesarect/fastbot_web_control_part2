@@ -83,6 +83,10 @@
             <span>◎</span>
             <p>Camera feed loading...</p>
           </div>
+          <!-- Log overlay -->
+          <div id="log-overlay">
+            <ul id="log-list"></ul>
+          </div>
         </div>
       </section>
 
@@ -100,8 +104,9 @@
               <canvas id="joystick-canvas" width="160" height="160"></canvas>
             </div>
             <div class="wasd-hint">
-              <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
-              <span>also supported</span>
+              <div class="wasd-row"><kbd>W</kbd></div>
+              <div class="wasd-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+              <span class="wasd-label">keyboard</span>
             </div>
           </div>
 
@@ -169,6 +174,7 @@
   <script src="lib/ros3d.min.js"></script>
 
   <!-- App Modules -->
+  <script src="js/logger.js"></script>
   <script src="js/connection.js"></script>
   <script src="js/camera.js"></script>
   <script src="js/telemetry.js"></script>

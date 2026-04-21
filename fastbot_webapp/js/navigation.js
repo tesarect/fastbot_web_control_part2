@@ -2,6 +2,7 @@
  * navigation.js
  * Sends Nav2 waypoint goals via /goal_pose topic.
  * Cancels via repeated zero velocity + new goal at current position.
+ * Adds goal-reached detection using odometry distance.
  */
 
 const navigation = (() => {
@@ -21,6 +22,10 @@ const navigation = (() => {
 
   // Track current robot position from odom
   let currentX = 0, currentY = 0, currentQz = 0, currentQw = 1;
+
+  // Goal tracking
+  let activeGoal = null;
+  let goalReached = false;
 
   function init(ros) {
     ros_ref = ros;
@@ -50,6 +55,23 @@ const navigation = (() => {
       currentY  = msg.pose.pose.position.y;
       currentQz = msg.pose.pose.orientation.z;
       currentQw = msg.pose.pose.orientation.w;
+
+      // GOAL REACHED CHECK
+      if (activeGoal && !goalReached) {
+        const dx = currentX - activeGoal.x;
+        const dy = currentY - activeGoal.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 0.2) { // 20 cm tolerance
+          goalReached = true;
+
+          logger.log('✔ Goal reached');
+          console.log('[Navigation] Goal reached');
+
+          document.querySelectorAll('.wp-btn').forEach(b => b.classList.remove('active'));
+          activeBtn = null;
+        }
+      }
     });
 
     console.log('[Navigation] Ready');
@@ -63,6 +85,10 @@ const navigation = (() => {
 
     const wp = WAYPOINTS[name];
     if (!wp) return;
+
+    // Set active goal
+    activeGoal = wp;
+    goalReached = false;
 
     // Highlight active button
     document.querySelectorAll('.wp-btn').forEach(b => b.classList.remove('active'));
@@ -81,11 +107,16 @@ const navigation = (() => {
       }
     }));
 
+    logger.log(`→ Navigating to ${name.replace('_',' ')}`);
     console.log(`[Navigation] Sent goal to: ${name}`, wp);
   }
 
   function cancelGoal() {
     clearStopInterval();
+
+    // Reset goal tracking
+    activeGoal = null;
+    goalReached = false;
 
     // Step 1 — send zero velocity immediately
     sendZeroVel();
@@ -108,7 +139,8 @@ const navigation = (() => {
 
     document.querySelectorAll('.wp-btn').forEach(b => b.classList.remove('active'));
     activeBtn = null;
-    console.log('[Navigation] Stop sent to current position', currentX.toFixed(2), currentY.toFixed(2));
+    logger.warn('Navigation stopped');
+    console.log('[Navigation] Stop sent');
   }
 
   function sendZeroVel() {
@@ -127,6 +159,10 @@ const navigation = (() => {
     clearStopInterval();
     if (goalTopic)   { goalTopic.unadvertise();   goalTopic   = null; }
     if (cmdVelTopic) { cmdVelTopic.unadvertise(); cmdVelTopic = null; }
+
+    activeGoal = null;
+    goalReached = false;
+
     document.querySelectorAll('.wp-btn').forEach(b => b.classList.remove('active'));
     activeBtn = null;
   }
