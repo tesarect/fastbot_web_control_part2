@@ -11,6 +11,7 @@ function onRosConnected(ros, rosbridgeUrl) {
   joystick.init(ros);
   navigation.init(ros);
   model3d.init(ros);
+  map2d.init(ros);
   console.log('ROS connected — initialisation modules COMPLETED');
 }
 
@@ -22,4 +23,5 @@ function onRosDisconnected() {
   joystick.stop();
   navigation.stop();
   model3d.stop();
+  map2d.stop();
 }

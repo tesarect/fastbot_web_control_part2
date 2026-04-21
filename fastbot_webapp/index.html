@@ -85,73 +85,105 @@
                 </div>
             </section>
 
-            <!-- BOTTOM: Controls -->
+            <!-- BOTTOM LEFT: 2D Map -->
+            <section class="panel panel-map" id="panel-map">
+                <div class="panel-header">
+                    <span class="panel-title">2D MAP</span>
+                    <span class="panel-badge" id="map-status">LOADING</span>
+                </div>
+                <div class="panel-body" id="map-container">
+                    <!-- ROS2D renders here -->
+                </div>
+            </section>
+
+            <!-- BOTTOM RIGHT — Controls + Telemetry -->
             <section class="panel panel-controls" id="panel-controls">
                 <div class="panel-header">
                     <span class="panel-title">CONTROLS</span>
                 </div>
-                <div class="controls-grid">
+                <div class="panel-body controls-layout">
 
-                    <!-- Joystick -->
-                    <div class="control-block joystick-block">
-                        <div class="block-label">JOYSTICK</div>
-                        <div class="joystick-wrap">
-                            <canvas id="joystick-canvas" width="160" height="160"></canvas>
+                    <!-- Top row: Joystick + Waypoints side by side -->
+                    <div class="controls-top-row">
+
+                        <!-- Joystick -->
+                        <div class="control-block joystick-block">
+                            <div class="block-label">JOYSTICK</div>
+                            <div class="joystick-wrap">
+                                <canvas id="joystick-canvas" width="140" height="140"></canvas>
+                            </div>
+                            <div class="wasd-hint">
+                                <div class="wasd-row"><kbd>W</kbd></div>
+                                <div class="wasd-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+                                <span class="wasd-label">keyboard</span>
+                            </div>
                         </div>
-                        <div class="wasd-hint">
-                            <div class="wasd-row"><kbd>W</kbd></div>
-                            <div class="wasd-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
-                            <span class="wasd-label">keyboard</span>
+
+                        <!-- Waypoints -->
+                        <div class="control-block waypoints-block">
+                            <div class="block-label">WAYPOINTS</div>
+                            <div class="waypoint-btns">
+                                <button class="wp-btn" onclick="navigation.sendWaypoint('living_room')">
+                                    <span class="wp-icon">⌂</span>
+                                    <span>LIVING ROOM</span>
+                                </button>
+                                <button class="wp-btn" onclick="navigation.sendWaypoint('kitchen')">
+                                    <span class="wp-icon">⚏</span>
+                                    <span>KITCHEN</span>
+                                </button>
+                                <button class="wp-btn" onclick="navigation.sendWaypoint('sofa')">
+                                    <span class="wp-icon">◈</span>
+                                    <span>SOFA</span>
+                                </button>
+                            </div>
+                            <button class="stop-btn" onclick="navigation.cancelGoal()">
+                                ■ STOP NAVIGATION
+                            </button>
                         </div>
+
                     </div>
 
-                    <!-- Speed & Pose -->
+                    <!-- Bottom row: Telemetry spanning full width -->
                     <div class="control-block telemetry-block">
                         <div class="block-label">TELEMETRY</div>
-                        <div class="telem-grid">
-                            <div class="telem-item">
-                                <span class="telem-label">LINEAR</span>
-                                <span class="telem-value" id="speed-linear">0.00 m/s</span>
-                            </div>
-                            <div class="telem-item">
-                                <span class="telem-label">ANGULAR</span>
-                                <span class="telem-value" id="speed-angular">0.00 rad/s</span>
-                            </div>
-                            <div class="telem-item">
-                                <span class="telem-label">POS X</span>
-                                <span class="telem-value" id="pos-x">0.000</span>
-                            </div>
-                            <div class="telem-item">
-                                <span class="telem-label">POS Y</span>
-                                <span class="telem-value" id="pos-y">0.000</span>
-                            </div>
-                            <div class="telem-item">
-                                <span class="telem-label">YAW</span>
-                                <span class="telem-value" id="pos-yaw">0.000°</span>
-                            </div>
-                        </div>
-                    </div>
+                        <div class="telem-groups">
 
-                    <!-- Waypoints -->
-                    <div class="control-block waypoints-block">
-                        <div class="block-label">WAYPOINTS</div>
-                        <div class="waypoint-btns">
-                            <button class="wp-btn" onclick="navigation.sendWaypoint('living_room')">
-                                <span class="wp-icon">⌂</span>
-                                <span>LIVING ROOM</span>
-                            </button>
-                            <button class="wp-btn" onclick="navigation.sendWaypoint('kitchen')">
-                                <span class="wp-icon">⚏</span>
-                                <span>KITCHEN</span>
-                            </button>
-                            <button class="wp-btn" onclick="navigation.sendWaypoint('sofa')">
-                                <span class="wp-icon">◈</span>
-                                <span>SOFA</span>
-                            </button>
+                            <div class="telem-group">
+                                <div class="telem-group-label">VELOCITY</div>
+                                <div class="telem-row">
+                                    <div class="telem-item">
+                                        <span class="telem-label">LINEAR</span>
+                                        <span class="telem-value" id="speed-linear">0.00 m/s</span>
+                                    </div>
+                                    <div class="telem-item">
+                                        <span class="telem-label">ANGULAR</span>
+                                        <span class="telem-value" id="speed-angular">0.00 rad/s</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="telem-group">
+                                <div class="telem-group-label">POSITION</div>
+                                <div class="telem-row">
+                                    <div class="telem-item">
+                                        <span class="telem-label">X</span>
+                                        <span class="telem-value" id="pos-x">0.0</span>
+                                        <span class="telem-unit">m</span>
+                                    </div>
+                                    <div class="telem-item">
+                                        <span class="telem-label">Y</span>
+                                        <span class="telem-value" id="pos-y">0.0</span>
+                                        <span class="telem-unit">m</span>
+                                    </div>
+                                    <div class="telem-item">
+                                        <span class="telem-label">YAW</span>
+                                        <span class="telem-value" id="pos-yaw">0.0</span>
+                                        <span class="telem-unit">deg</span>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
-                        <button class="stop-btn" onclick="navigation.cancelGoal()">
-                            ■ STOP NAVIGATION
-                        </button>
                     </div>
 
                 </div>
@@ -168,6 +200,9 @@
     <script src="lib/three.min.js"></script>
     <script src="lib/ros3d.min.js"></script>
 
+    <!-- 2D Map Library -->
+    <script src="lib/ros2d.js"></script>
+
     <!-- App Modules -->
     <script src="js/logger.js"></script>
     <script src="js/connection.js"></script>
@@ -175,7 +210,9 @@
     <script src="js/telemetry.js"></script>
     <script src="js/joystick.js"></script>
     <script src="js/navigation.js"></script>
+    <script src="lib/easeljs.min.js"></script>
     <script src="js/model3d.js"></script>
+    <script src="js/map2d.js"></script>
     <script src="js/main.js"></script>
 
 </body>
