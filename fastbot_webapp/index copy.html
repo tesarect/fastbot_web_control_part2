@@ -9,10 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="css/style.css" />
-
-    <script type="text/javascript" src="https://s3.eu-west-1.amazonaws.com/rosject.io/js/roslib.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eventemitter2@5.0.1/lib/eventemitter2.min.js"></script>
 </head>
 
 <body>
@@ -38,10 +34,9 @@
         </div>
     </div>
 
-    <!-- ── MAIN DASHBOARD (hidden until connected) ── -->
+    <!-- ── MAIN DASHBOARD ── -->
     <div id="dashboard" class="hidden">
 
-        <!-- Top Bar -->
         <header class="topbar">
             <div class="topbar-left">
                 <div class="logo-small">⬡ FASTBOT</div>
@@ -55,63 +50,52 @@
             </button>
         </header>
 
-        <!-- Main Grid -->
         <main class="dashboard-grid">
 
-            <!-- TOP LEFT: 3D Model Viewer -->
+            <!-- Q1: Top-Left — 3D Model -->
             <section class="panel panel-model" id="panel-model">
                 <div class="panel-header">
                     <span class="panel-title">3D MODEL</span>
                     <span class="panel-badge" id="model-status">LOADING</span>
                 </div>
-                <div class="panel-body" id="model-container">
-                    <!-- ros3djs renders a WebGL canvas here automatically -->
-                </div>
+                <div class="panel-body" id="model-container"></div>
             </section>
 
-            <!-- TOP RIGHT: Camera Feed -->
+            <!-- Q2: Top-Right — Camera Feed -->
             <section class="panel panel-camera" id="panel-camera">
                 <div class="panel-header">
                     <span class="panel-title">CAMERA FEED</span>
                     <span class="panel-badge" id="cam-status">CONNECTING</span>
                 </div>
                 <div class="panel-body">
-                    <!-- <img id="camera-feed" alt="Camera feed"
-                        onerror="document.getElementById('cam-status').textContent='NO SIGNAL'" /> -->
-                    <!-- <div id="mjpeg-camera" style="width:100%;height:100%;"></div> -->
                     <div id="cam-placeholder" class="placeholder-msg">
                         <span>◎</span>
                         <p>Camera feed loading...</p>
                     </div>
-                    <!-- Log overlay -->
                     <div id="log-overlay">
                         <ul id="log-list"></ul>
                     </div>
                 </div>
             </section>
 
-            <!-- BOTTOM LEFT: 2D Map -->
+            <!-- Q3: Bottom-Left — 2D Map -->
             <section class="panel panel-map" id="panel-map">
                 <div class="panel-header">
                     <span class="panel-title">2D MAP</span>
                     <span class="panel-badge" id="map-status">LOADING</span>
                 </div>
-                <div class="panel-body" id="map-container">
-                    <!-- ROS2D renders here -->
-                </div>
+                <div class="panel-body" id="map-container"></div>
             </section>
 
-            <!-- BOTTOM RIGHT — Controls + Telemetry -->
+            <!-- Q4: Bottom-Right — Controls + Telemetry -->
             <section class="panel panel-controls" id="panel-controls">
                 <div class="panel-header">
                     <span class="panel-title">CONTROLS</span>
                 </div>
                 <div class="panel-body controls-layout">
 
-                    <!-- Top row: Joystick + Waypoints side by side -->
                     <div class="controls-top-row">
 
-                        <!-- Joystick -->
                         <div class="control-block joystick-block">
                             <div class="block-label">JOYSTICK</div>
                             <div class="joystick-wrap">
@@ -124,21 +108,17 @@
                             </div>
                         </div>
 
-                        <!-- Waypoints -->
                         <div class="control-block waypoints-block">
                             <div class="block-label">WAYPOINTS</div>
                             <div class="waypoint-btns">
                                 <button class="wp-btn" onclick="navigation.sendWaypoint('living_room')">
-                                    <span class="wp-icon">⌂</span>
-                                    <span>LIVING ROOM</span>
+                                    <span class="wp-icon">⌂</span><span>LIVING ROOM</span>
                                 </button>
                                 <button class="wp-btn" onclick="navigation.sendWaypoint('kitchen')">
-                                    <span class="wp-icon">⚏</span>
-                                    <span>KITCHEN</span>
+                                    <span class="wp-icon">⚏</span><span>KITCHEN</span>
                                 </button>
                                 <button class="wp-btn" onclick="navigation.sendWaypoint('sofa')">
-                                    <span class="wp-icon">◈</span>
-                                    <span>SOFA</span>
+                                    <span class="wp-icon">◈</span><span>SOFA</span>
                                 </button>
                             </div>
                             <button class="stop-btn" onclick="navigation.cancelGoal()">
@@ -148,7 +128,6 @@
 
                     </div>
 
-                    <!-- Bottom row: Telemetry spanning full width -->
                     <div class="control-block telemetry-block">
                         <div class="block-label">TELEMETRY</div>
                         <div class="telem-groups">
@@ -158,11 +137,13 @@
                                 <div class="telem-row">
                                     <div class="telem-item">
                                         <span class="telem-label">LINEAR</span>
-                                        <span class="telem-value" id="speed-linear">0.00 m/s</span>
+                                        <span class="telem-value" id="speed-linear">0.000</span>
+                                        <span class="telem-unit">m/s</span>
                                     </div>
                                     <div class="telem-item">
                                         <span class="telem-label">ANGULAR</span>
-                                        <span class="telem-value" id="speed-angular">0.00 rad/s</span>
+                                        <span class="telem-value" id="speed-angular">0.000</span>
+                                        <span class="telem-unit">rad/s</span>
                                     </div>
                                 </div>
                             </div>
@@ -172,12 +153,12 @@
                                 <div class="telem-row">
                                     <div class="telem-item">
                                         <span class="telem-label">X</span>
-                                        <span class="telem-value" id="pos-x">0.0</span>
+                                        <span class="telem-value" id="pos-x">0.000</span>
                                         <span class="telem-unit">m</span>
                                     </div>
                                     <div class="telem-item">
                                         <span class="telem-label">Y</span>
-                                        <span class="telem-value" id="pos-y">0.0</span>
+                                        <span class="telem-value" id="pos-y">0.000</span>
                                         <span class="telem-unit">m</span>
                                     </div>
                                     <div class="telem-item">
@@ -197,34 +178,14 @@
         </main>
     </div>
 
-    <!-- ROS Libraries (self-hosted to avoid CDN blocks) -->
-    <!-- <script src="lib/eventemitter2.min.js"></script> -->
-    <!-- <script src="lib/roslib.min.js"></script> -->
-    <script src="./libs/mjpegcanvas.min.js"></script>
-    <!-- <script src="libs/mjpegcanvas.js"></script> -->
+    <!-- ── LIBRARIES (static, cached) ── -->
+    <script src="lib/eventemitter2.min.js"></script>
+    <script src="lib/roslib.min.js"></script>
+    <!-- No mjpegcanvas needed — camera uses native browser MJPEG via <img> -->
+    <script src="libs/three.min.js"></script>
+    <script src="libs/ros3d.min.js"></script>
 
-    <!-- 3D Model Libraries -->
-    <script src="./libs/three.min.js"></script>
-    <script src="./libs/ColladaLoader.js"></script>
-    <script src="./libs/ColladaLoader2.js"></script>
-    <script src="./libs/STLLoader.js"></script>
-    <script src="./libs/ros3d.min.js"></script>
-
-    <!-- 2D Map Library -->
-    <!-- <script src="libs/ros2d.js"></script> -->
-
-    <!-- App Modules -->
-    <!-- <script src="js/logger.js"></script>
-    <script src="js/connection.js"></script>
-    <script src="js/camera.js"></script>
-    <script src="js/telemetry.js"></script>
-    <script src="js/joystick.js"></script>
-    <script src="js/navigation.js"></script>
-    <script src="lib/easeljs.min.js"></script>
-    <script src="js/model3d.js"></script>
-    <script src="js/map2d.js"></script>
-    <script src="js/main.js"></script> -->
-    <!-- App modules: cache-busted -->
+    <!-- ── APP MODULES (cache-busted) ── -->
     <script>
         const v = '?v=' + Date.now();
         const modules = [
@@ -249,5 +210,4 @@
     </script>
 
 </body>
-
 </html>

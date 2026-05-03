@@ -180,16 +180,13 @@ const map2d = (() => {
 
     // Create canvas inside container
     canvas = document.createElement('canvas');
-    // canvas.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:100%;max-height:100%;';
-    // canvas.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:100%;max-height:100%;image-rendering:pixelated;';
-    canvas.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:100%;max-height:100%;image-rendering:auto;';
+    canvas.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:100%;max-height:100%;image-rendering:pixelated;';
     container.appendChild(canvas);
     ctx = canvas.getContext('2d');
 
     // Subscribe to /map
     mapSub = new ROSLIB.Topic({
       ros,
-    //   name:        '/global_costmap/costmap',
       name:        '/map',
       messageType: 'nav_msgs/OccupancyGrid',
       throttle_rate: 0,
@@ -218,8 +215,7 @@ const map2d = (() => {
 
     // Resize handler
     window.addEventListener('resize', () => {
-    //   if (mapMeta && mapImageData) buildMapImage({ info: mapMeta, data: null });
-          // Resize: redraw cached imageData only, never re-process msg.data (which would be null)
+      // Resize: redraw cached imageData only, never re-process msg.data (which would be null)
       if (!mapMeta || !mapImageData || !canvas || !ctx) return;
       drawMap();
     });

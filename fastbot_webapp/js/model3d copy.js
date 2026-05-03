@@ -1,8 +1,4 @@
-/**
- * model3d.js — stripped to match example code exactly.
- * Everything non-essential commented out for debugging.
- * Add back map/costmap/laser after model appears.
- */
+/** model3d.js — 3D viewer: URDF robot + occupancy map + laser */
 
 const model3d = (() => {
 
@@ -13,11 +9,9 @@ const model3d = (() => {
   let poseSub       = null;
   let visPoller     = null;
 
-//   const FIXED_FRAME = 'fastbot_1_odom';
-//   const URDF_FIXED_FRAME = 'fastbot_1_base_link';
   const URDF_FIXED_FRAME = 'fastbot_1_odom';
   const MAP_FIXED_FRAME  = 'map';
-  const URDF_PARAM  = '/fastbot_1_robot_state_publisher:robot_description';
+  const URDF_PARAM       = '/fastbot_1_robot_state_publisher:robot_description';
 
   // ---------------------------------------------------------------------------
   // TF Tree — stores raw parent→child transforms from /tf and /tf_static,
@@ -72,7 +66,7 @@ const model3d = (() => {
     compute(fixedFrame, targetFrame) {
       if (fixedFrame === targetFrame) {
         return { translation: {x:0,y:0,z:0}, rotation: {x:0,y:0,z:0,w:1} };
-  }
+      }
 
       // Walk from targetFrame up to fixedFrame collecting the chain
       const chain = [];
@@ -84,7 +78,7 @@ const model3d = (() => {
         if (!t) return null;  // chain broken
         chain.push(t);
         current = t.parentFrame;
-  }
+      }
 
       if (current !== fixedFrame) return null;
 
@@ -105,7 +99,7 @@ const model3d = (() => {
         // Compose rotations
         const q = this.multiplyQ({x:rx,y:ry,z:rz,w:rw}, t.rotation);
         rx = q.x; ry = q.y; rz = q.z; rw = q.w;
-  }
+      }
 
       return {
         translation: { x: tx, y: ty, z: tz },
@@ -125,14 +119,14 @@ const model3d = (() => {
 
       // Update all registered clients
       clients.forEach(({ client, fixedFrame }) => {
-      Object.keys(client.frameInfos).forEach(frameId => {
-        const computed = tfTree.compute(fixedFrame, frameId);
-        if (!computed) return;
-        const fi = client.frameInfos[frameId];
-        fi.transform = {
-          translation: computed.translation,
-          rotation:    computed.rotation,
-        };
+        Object.keys(client.frameInfos).forEach(frameId => {
+          const computed = tfTree.compute(fixedFrame, frameId);
+          if (!computed) return;
+          const fi = client.frameInfos[frameId];
+          fi.transform = {
+            translation: computed.translation,
+            rotation:    computed.rotation,
+          };
           if (fi.cbs) fi.cbs.forEach(cb => cb(fi.transform));
         });
       });
@@ -251,7 +245,7 @@ const model3d = (() => {
       viewer.scene.traverse((obj) => {
         if (obj.type !== 'Mesh') return;
         if (!obj.name || obj.name.length < 3 || obj.name.match(/^[0-9A-F]{8}$/i)) return;
-          named++;
+        named++;
         if (obj.visible) vis++;
       });
       const elapsed = checks * 2;
@@ -295,7 +289,6 @@ const model3d = (() => {
 
     // ── Viewer ────────────────────────────────────────────────────────────────
     viewer = new ROS3D.Viewer({
-    //   background: '#cccccc',
       background: '#111111',
       divID:      'model-container',
       width:      container.clientWidth  || 400,
@@ -375,11 +368,11 @@ const model3d = (() => {
         continuous: true,
         opacity:    1.0,
         offsetPose: zPose(-0.05),  // lower map so robot sits on top
-          });
+      });
       console.log('[Model3D] OccupancyGridClient attached to /map');
     } catch (e) {
       console.warn('[Model3D] Map unavailable:', e.message);
-        }
+    }
 
     // ── Laser scan ────────────────────────────────────────────────────────────
     try {

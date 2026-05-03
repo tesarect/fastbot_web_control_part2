@@ -8,7 +8,8 @@ const joystick = (() => {
   const CMD_VEL_TOPIC = '/fastbot_1/cmd_vel';
   const MAX_LINEAR  = 0.3;   // m/s
   const MAX_ANGULAR = 1.0;   // rad/s
-  const PUBLISH_HZ  = 10;    // publish rate
+//   const PUBLISH_HZ  = 10;    // publish rate
+  const PUBLISH_HZ  = 5;    // publish rate
 
   let publisher  = null;
   let interval   = null;

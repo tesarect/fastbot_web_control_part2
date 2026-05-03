@@ -117,38 +117,37 @@ const model3d = (() => {
   // ---------------------------------------------------------------------------
   // Subscribe to /tf and /tf_static, store in tree, update tfClient frameInfos
   // ---------------------------------------------------------------------------
-  // Single shared /tf subscription feeds all TF clients
-  // Avoids duplicate subscriptions that lag the simulation
-  function setupDirectTF(ros, clients) {
+  function setupDirectTF(ros, client, fixedFrame) {
     function processMsgs(msg) {
       msg.transforms.forEach(t => tfTree.store(t));
 
-      // Update all registered clients
-      clients.forEach(({ client, fixedFrame }) => {
+      // Recompute all requested frames
       Object.keys(client.frameInfos).forEach(frameId => {
         const computed = tfTree.compute(fixedFrame, frameId);
         if (!computed) return;
+
         const fi = client.frameInfos[frameId];
+        // Create ROSLIB.Transform-compatible object
         fi.transform = {
           translation: computed.translation,
           rotation:    computed.rotation,
         };
-          if (fi.cbs) fi.cbs.forEach(cb => cb(fi.transform));
-        });
+        // Fire all callbacks (this is what SceneNode uses to update position)
+        if (fi.cbs) {
+          fi.cbs.forEach(cb => cb(fi.transform));
+        }
       });
     }
 
-    // ONE subscription to /tf for all clients
     const tfSub = new ROSLIB.Topic({
       ros, name: '/tf', messageType: 'tf2_msgs/TFMessage',
-      queue_length: 50, throttle_rate: 50,  // 20Hz max, reduce CPU
+      queue_length: 100, throttle_rate: 0,
     });
     tfSub.subscribe(processMsgs);
 
-    // ONE subscription to /tf_static for all clients
     const tfStaticSub = new ROSLIB.Topic({
       ros, name: '/tf_static', messageType: 'tf2_msgs/TFMessage',
-      queue_length: 10, throttle_rate: 0,
+      queue_length: 100, throttle_rate: 0,
     });
     tfStaticSub.subscribe(processMsgs);
 
@@ -261,15 +260,11 @@ const model3d = (() => {
       if (named >= MIN_MESHES && stableChecks >= STABLE_NEED && vis === named) {
         clearInterval(visPoller); visPoller = null;
         hideLoadingOverlay();
-        const b1 = document.getElementById("model-status");
-        if (b1) { b1.textContent = "LIVE"; b1.classList.add("live"); }
         console.log(`[Model3D] ${named} meshes visible — overlay hidden`);
       }
       if (named >= MIN_MESHES && stableChecks >= STABLE_NEED && elapsed >= 30) {
         clearInterval(visPoller); visPoller = null;
         hideLoadingOverlay();
-        const b2 = document.getElementById("model-status");
-        if (b2) { b2.textContent = "LIVE"; b2.classList.add("live"); }
         console.warn(`[Model3D] Timeout — ${vis}/${named} visible`);
       }
       if (checks > 90) {
@@ -302,6 +297,7 @@ const model3d = (() => {
       height:     container.clientHeight || 300,
       antialias:  true,
       fixedFrame: URDF_FIXED_FRAME,
+    //   fixedFrame: FIXED_FRAME,
     });
     window._viewer = viewer;
 
@@ -324,6 +320,10 @@ const model3d = (() => {
     });
     window._tfClient = tfClient;
 
+    // Direct /tf subscription with proper tree chaining
+    setupDirectTF(ros, tfClient, URDF_FIXED_FRAME);
+    console.log('[Model3D] Direct /tf subscription active for URDF');
+
     // ── TF client for map ─────────────────────────────────────────────────────
     mapTfClient = new ROSLIB.TFClient({
       ros,
@@ -335,13 +335,7 @@ const model3d = (() => {
       repubServiceName:    '/republish_tfs',
       groovyCompatibility: true,
     });
-
-    // Single shared /tf + /tf_static subscription for ALL clients — avoids duplicates
-    setupDirectTF(ros, [
-      { client: tfClient,    fixedFrame: URDF_FIXED_FRAME },
-      { client: mapTfClient, fixedFrame: MAP_FIXED_FRAME  },
-    ]);
-    console.log('[Model3D] Single /tf subscription active for all clients');
+    setupDirectTF(ros, mapTfClient, MAP_FIXED_FRAME);
 
     // ── URDF ──────────────────────────────────────────────────────────────────
     setLoadDetail('Fetching URDF...');
@@ -374,7 +368,7 @@ const model3d = (() => {
         topic:      '/map',
         continuous: true,
         opacity:    1.0,
-        offsetPose: zPose(-0.05),  // lower map so robot sits on top
+        offsetPose: zPose(-0.01),
           });
       console.log('[Model3D] OccupancyGridClient attached to /map');
     } catch (e) {
@@ -385,11 +379,9 @@ const model3d = (() => {
     try {
       new ROS3D.LaserScan({
         ros, tfClient,
-        rootObject:    viewer.scene,
-        topic:         '/scan',
-        material:      { color: 0xff2200, size: 0.05 },
-        throttle_rate: 200,  // 5Hz max — scan is large, reduce rosbridge load
-        queue_length:  1,
+        rootObject: viewer.scene,
+        topic:      '/scan',
+        material:   { color: 0xff2200, size: 0.05 },
       });
     } catch (e) { /* non-fatal */ }
 
@@ -403,7 +395,8 @@ const model3d = (() => {
     });
     poseSub.subscribe((_msg) => {});
 
-    if (badge) { badge.textContent = 'LOADING'; badge.classList.remove('live'); }
+    // ── Status & resize ───────────────────────────────────────────────────────
+    if (badge) { badge.textContent = 'LIVE'; badge.classList.add('live'); }
     logger.log('3D viewer initialised');
     console.log('[Model3D] Viewer ready');
 
