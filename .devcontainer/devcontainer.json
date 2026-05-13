@@ -1,0 +1,45 @@
+{
+  "name": "Fastbot Webapp",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+
+  "forwardPorts": [7000, 9090, 11315],
+  "portsAttributes": {
+    "7000": {
+      "label": "Webapp (http-server)",
+      "onAutoForward": "openBrowser"
+    },
+    "9090": {
+      "label": "rosbridge (websocket)",
+      "onAutoForward": "silent"
+    },
+    "11315": {
+      "label": "web_video_server",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ritwickdey.LiveServer",
+        "ms-python.python"
+      ],
+      "settings": {
+        "liveServer.settings.port": 7000,
+        "liveServer.settings.root": "/fastbot_webapp"
+      }
+    }
+  },
+
+  "postCreateCommand": "python3 --version && echo 'Run: cd fastbot_webapp && python3 -m http.server 7000'",
+
+  "remoteUser": "vscode"
+}
