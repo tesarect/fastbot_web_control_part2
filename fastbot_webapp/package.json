@@ -1,0 +1,31 @@
+{
+  "name": "fastbot-webapp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "FastBot web control interface — ROS bridge dashboard with 3D viewer, 2D map, camera feed and teleop.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 7000",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,html}\" \"*.{ts,js,json,md}\""
+  },
+  "dependencies": {
+    "roslib": "^1.4.1",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@types/roslib": "^1.3.5",
+    "@types/three": "^0.160.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0"
+  }
+}
