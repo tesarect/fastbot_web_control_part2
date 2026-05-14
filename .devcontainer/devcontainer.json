@@ -11,7 +11,7 @@
   "forwardPorts": [7000, 9090, 11315],
   "portsAttributes": {
     "7000": {
-      "label": "Webapp (http-server)",
+      "label": "Vite dev server",
       "onAutoForward": "openBrowser"
     },
     "9090": {
@@ -29,17 +29,12 @@
       "extensions": [
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
-        "ritwickdey.LiveServer",
         "ms-python.python"
-      ],
-      "settings": {
-        "liveServer.settings.port": 7000,
-        "liveServer.settings.root": "/fastbot_webapp"
-      }
+      ]
     }
   },
 
-  "postCreateCommand": "python3 --version && echo 'Run: cd fastbot_webapp && python3 -m http.server 7000'",
+  "postCreateCommand": "corepack enable && corepack prepare pnpm@latest --activate && cd fastbot_webapp && pnpm install",
 
   "remoteUser": "vscode"
 }

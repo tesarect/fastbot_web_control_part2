@@ -42,19 +42,19 @@ fastbot_webapp/
 
 ```bash
 cd fastbot_webapp
-npm install
-npm run dev          # Vite dev server on http://localhost:7000
+pnpm install
+pnpm dev          # Vite dev server on http://localhost:7000
 ```
 
 Other scripts:
 
 | Script | Purpose |
 | --- | --- |
-| `npm run build` | Type-check + production build to `dist/` |
-| `npm run preview` | Serve the production build locally |
-| `npm run typecheck` | `tsc --noEmit` only |
-| `npm run lint` | ESLint over `src/` |
-| `npm run format` | Prettier write |
+| `pnpm build` | Type-check + production build to `dist/` |
+| `pnpm preview` | Serve the production build locally |
+| `pnpm typecheck` | `tsc --noEmit` only |
+| `pnpm lint` | ESLint over `src/` |
+| `pnpm format` | Prettier write |
 
 ## Running the full stack
 
@@ -67,9 +67,9 @@ ros2 launch fastbot_slam navigation.launch.py
 Then in separate terminals:
 
 ```bash
-# 1. Frontend dev server (or `npm run preview` after build)
+# 1. Frontend dev server (or `pnpm preview` after build)
 cd ~/webpage_ws/fastbot_webapp
-npm run dev
+pnpm dev
 
 # 2. ROS bridge
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml

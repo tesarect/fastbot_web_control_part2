@@ -4,7 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "description": "FastBot web control interface — ROS bridge dashboard with 3D viewer, 2D map, camera feed and teleop.",
+  "packageManager": "pnpm@11.0.9",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
   "scripts": {
+    "preinstall": "node -e \"if(!(process.env.npm_execpath||'').includes('pnpm')){console.error('\\n  This project uses pnpm. Run: pnpm install\\n  (install pnpm via: npm i -g pnpm)\\n');process.exit(1)}\"",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 7000",
