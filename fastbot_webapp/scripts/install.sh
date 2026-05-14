@@ -2,9 +2,16 @@
 # Install Node.js LTS + pnpm on a Linux server, then install the webapp's
 # dependencies. Mirrors what .devcontainer/devcontainer.json provisions.
 #
-# Usage:  ./scripts/install.sh
-# Tested on Ubuntu 22.04 / 24.04 and Debian 12.
+# Strategy:
+#   - If nvm is present, upgrade Node through nvm so we don't fight a
+#     pre-existing nvm-managed binary that's first on PATH.
+#   - Otherwise install Node LTS via NodeSource apt repo.
+#   - Activate pnpm via Corepack at the version pinned in package.json.
+#   - Invoke corepack/pnpm by absolute path from the new node's bin dir so
+#     stale shims on PATH (e.g. /usr/local/bin/pnpm from earlier broken
+#     installs) can't shadow the working binary.
 #
+# Usage:  ./scripts/install.sh
 # Re-running is safe — each step checks what's already in place.
 
 set -euo pipefail
@@ -20,36 +27,68 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEBAPP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 [[ -f "${WEBAPP_DIR}/package.json" ]] || fatal "package.json not found in ${WEBAPP_DIR}"
 
-# Read pnpm version from package.json — falls back to "latest" if Node isn't
-# yet available (first run) or the file can't be parsed.
+# Set by install_node — used by every subsequent step.
+NODE_BIN_DIR=""
+USED_NVM=false
+
+# ── helpers ──────────────────────────────────────────────────────────────────
 read_pnpm_version() {
-  if command -v node >/dev/null 2>&1; then
-    node -p "(require('${WEBAPP_DIR}/package.json').packageManager||'').split('@')[1] || ''" 2>/dev/null
+  local node_bin="${NODE_BIN_DIR:-}/node"
+  if [[ -x "$node_bin" ]]; then
+    "$node_bin" -p "(require('${WEBAPP_DIR}/package.json').packageManager||'').split('@')[1] || ''" 2>/dev/null
   else
     grep -oP '"packageManager"\s*:\s*"pnpm@\K[^"]+' "${WEBAPP_DIR}/package.json" || true
   fi
 }
 
-# Major version of whichever node is currently first on PATH (or 0).
 node_major() {
   command -v node >/dev/null 2>&1 || { echo 0; return; }
   node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0
 }
 
-# ── 1. Node.js LTS via NodeSource ────────────────────────────────────────────
-install_node() {
-  local current
-  current="$(node_major)"
-  if (( current >= REQUIRED_NODE_MAJOR )); then
-    log "Node $(node --version) already installed — skipping."
-    return
-  fi
-  if (( current > 0 )); then
-    warn "Existing node is v$(node --version 2>&1) — replacing with NodeSource LTS."
-  fi
+detect_nvm() {
+  local candidates=(
+    "${NVM_DIR:-}"
+    "${HOME}/.nvm"
+    "/usr/local/nvm"
+    "/usr/local/share/nvm"
+    "/usr/local/share/shell/.nvm"
+    "/opt/nvm"
+  )
+  for d in "${candidates[@]}"; do
+    [[ -n "$d" && -s "$d/nvm.sh" ]] && { echo "$d"; return; }
+  done
+  echo ""
+}
 
+load_nvm() {
+  local nvm_dir="$1"
+  export NVM_DIR="$nvm_dir"
+  set +u
+  # shellcheck disable=SC1090
+  . "${nvm_dir}/nvm.sh"
+  set -u
+}
+
+# ── 1. Node.js LTS ───────────────────────────────────────────────────────────
+install_node_via_nvm() {
+  local nvm_dir="$1"
+  log "nvm detected at ${nvm_dir} — installing Node LTS through nvm..."
+  load_nvm "$nvm_dir"
+
+  nvm install --lts
+  nvm use --lts
+  nvm alias default 'lts/*' >/dev/null
+  USED_NVM=true
+
+  NODE_BIN_DIR="$(dirname "$(nvm which current)")"
+  log "Active node: $("${NODE_BIN_DIR}/node" --version) (${NODE_BIN_DIR}/node)"
+  warn "Open a NEW shell (or run 'nvm use --lts') so future logins pick up the LTS default."
+}
+
+install_node_via_apt() {
   command -v apt-get >/dev/null 2>&1 \
-    || fatal "Only apt-based distros (Ubuntu/Debian) are supported by this script. Install Node ${REQUIRED_NODE_MAJOR}+ manually then re-run."
+    || fatal "No nvm found and apt-get unavailable. Install Node ${REQUIRED_NODE_MAJOR}+ manually then re-run."
 
   log "Installing Node.js LTS via NodeSource..."
   sudo apt-get update -y
@@ -57,59 +96,70 @@ install_node() {
   curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
   sudo apt-get install -y nodejs
 
-  # NodeSource installs to /usr/bin/node. Bash caches command paths, and
-  # an older /usr/local/bin/node (if present) takes PATH priority — both
-  # can leave us still resolving to the stale binary. Reset the cache,
-  # then verify the active node is actually new enough.
-  hash -r 2>/dev/null || true
-  local active_path active_version active_major
-  active_path="$(command -v node || echo '')"
-  active_version="$(node --version 2>/dev/null || echo 'unknown')"
-  active_major="$(node_major)"
+  # NodeSource installs node to /usr/bin/node. We pin to that absolute
+  # path rather than trusting PATH lookup, in case an older /usr/local
+  # binary still shadows it.
+  NODE_BIN_DIR="/usr/bin"
+  local v
+  v="$("${NODE_BIN_DIR}/node" --version 2>/dev/null || echo 'missing')"
+  [[ "$v" =~ ^v([0-9]+) ]] && (( BASH_REMATCH[1] >= REQUIRED_NODE_MAJOR )) \
+    || fatal "NodeSource install reports ${v} at ${NODE_BIN_DIR}/node — expected v${REQUIRED_NODE_MAJOR}+."
+  log "Active node: ${v} (${NODE_BIN_DIR}/node)"
+}
 
-  if (( active_major < REQUIRED_NODE_MAJOR )); then
-    fatal "Installed NodeSource Node but 'node --version' still reports ${active_version} at ${active_path}.
-A conflicting older Node is shadowing the new one. Remove it with one of:
-
-  # If installed via apt 'nodejs' from the distro repo:
-  sudo apt-get remove -y nodejs libnode-dev libnode72 libnode-* && sudo apt-get autoremove -y
-
-  # If installed manually under /usr/local:
-  sudo rm -f /usr/local/bin/node /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
-
-Then re-run this script."
+install_node() {
+  local current
+  current="$(node_major)"
+  if (( current >= REQUIRED_NODE_MAJOR )); then
+    NODE_BIN_DIR="$(dirname "$(command -v node)")"
+    log "Node $(node --version) already installed at ${NODE_BIN_DIR}/node — skipping."
+    return
+  fi
+  if (( current > 0 )); then
+    warn "Current node is $(node --version) — upgrading."
   fi
 
-  log "Active node: ${active_version} (${active_path})"
+  local nvm_dir
+  nvm_dir="$(detect_nvm)"
+  if [[ -n "$nvm_dir" ]]; then
+    install_node_via_nvm "$nvm_dir"
+  else
+    install_node_via_apt
+  fi
 }
 
 # ── 2. pnpm via Corepack ─────────────────────────────────────────────────────
 install_pnpm() {
-  hash -r 2>/dev/null || true
-  command -v corepack >/dev/null 2>&1 \
-    || fatal "corepack not found — Node install must have failed."
-
-  # Use sudo -E with the current PATH so sudo picks up the NodeSource
-  # binaries at /usr/bin rather than an older corepack elsewhere.
-  log "Enabling Corepack..."
-  sudo -E env PATH="$PATH" corepack enable
+  local corepack_bin="${NODE_BIN_DIR}/corepack"
+  local pnpm_bin="${NODE_BIN_DIR}/pnpm"
+  [[ -x "$corepack_bin" ]] || fatal "corepack not found at ${corepack_bin}"
 
   local pnpm_version
   pnpm_version="$(read_pnpm_version)"
   local target="${pnpm_version:-latest}"
 
-  log "Activating pnpm@${target}..."
-  sudo -E env PATH="$PATH" corepack prepare "pnpm@${target}" --activate
+  # Only the NodeSource path lives under root-owned /usr/bin.
+  local maybe_sudo=()
+  if [[ "$USED_NVM" != "true" ]]; then
+    maybe_sudo=(sudo -E env "PATH=$PATH")
+  fi
 
-  hash -r 2>/dev/null || true
-  log "Active pnpm: $(pnpm --version)"
+  log "Enabling Corepack..."
+  "${maybe_sudo[@]}" "$corepack_bin" enable
+
+  log "Activating pnpm@${target}..."
+  "${maybe_sudo[@]}" "$corepack_bin" prepare "pnpm@${target}" --activate
+
+  [[ -x "$pnpm_bin" ]] || fatal "corepack didn't create ${pnpm_bin}. Try: ${corepack_bin} enable --install-directory ${NODE_BIN_DIR}"
+  log "Active pnpm: $("$pnpm_bin" --version) (${pnpm_bin})"
 }
 
 # ── 3. Project dependencies ──────────────────────────────────────────────────
 install_deps() {
+  local pnpm_bin="${NODE_BIN_DIR}/pnpm"
   log "Installing webapp dependencies (pnpm install)..."
   cd "${WEBAPP_DIR}"
-  pnpm install --frozen-lockfile
+  "$pnpm_bin" install --frozen-lockfile
   log "Dependencies installed."
 }
 
@@ -118,8 +168,11 @@ main() {
   install_pnpm
   install_deps
   log "Done. Next steps:"
-  log "  pnpm build      # produce dist/"
-  log "  pnpm preview    # serve dist/ on http://0.0.0.0:7000"
+  log "  ${NODE_BIN_DIR}/pnpm build      # produce dist/"
+  log "  ${NODE_BIN_DIR}/pnpm preview    # serve dist/ on http://0.0.0.0:7000"
+  if [[ "$USED_NVM" == "true" ]]; then
+    log "Tip: open a new shell so 'node', 'pnpm' on your interactive PATH point at the new install."
+  fi
 }
 
 main "$@"
