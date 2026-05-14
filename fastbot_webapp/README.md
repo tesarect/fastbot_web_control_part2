@@ -46,6 +46,20 @@ pnpm install
 pnpm dev          # Vite dev server on http://localhost:7000
 ```
 
+## Server install
+
+Provision a fresh Ubuntu / Debian host with the matching Node LTS, pnpm
+(pinned to the version in [`packageManager`](package.json)) and the webapp
+dependencies:
+
+```bash
+cd fastbot_webapp
+./scripts/install.sh
+```
+
+The script is idempotent — re-running upgrades stale tools and re-syncs
+`node_modules/` from the lockfile.
+
 Other scripts:
 
 | Script | Purpose |
